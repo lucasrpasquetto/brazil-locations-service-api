@@ -10,6 +10,8 @@ use Slim\App;
 
 require __DIR__ . '/../vendor/autoload.php';
 
+App\Env::load(__DIR__ . '/../.env');
+
 /** @var App $app */
 $app = AppFactory::create();
 $app->addBodyParsingMiddleware();
