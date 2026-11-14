@@ -1,6 +1,9 @@
 <p align="center">
   <a href="https://blitsoft.com.br">
-    <img src="docs/assets/blit-logo.svg" alt="Blit Softwares" height="48">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="docs/assets/blit-logo-dark.svg">
+      <img src="docs/assets/blit-logo.svg" alt="Blit Softwares" height="48">
+    </picture>
   </a>
 </p>
 
