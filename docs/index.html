@@ -16,6 +16,7 @@ th{background:#F1F7F3;font-size:12px;letter-spacing:.06em;text-transform:upperca
 tr:last-child td{border-bottom:0}
 a{color:#0E4A38}
 </style></head><body><div class="wrap">
+<img src="assets/blit-logo.svg" alt="Blit Softwares" style="height:40px;margin-bottom:22px">
 <span class="tag">API pública</span>
 <h1>Brazil Locations</h1>
 <p>Países, regiões, UFs e municípios brasileiros com código IBGE. Leitura, sem autenticação, sem chave.</p>
@@ -51,6 +52,10 @@ curl http://127.0.0.1:8130/v1/locations/cities/1100015</pre>
 <h2>Para agentes de IA</h2>
 <p>Existe uma versão enxuta, sem HTML: <a href="/llms.txt">/llms.txt</a>. E a especificação completa em <a href="/openapi.json">/openapi.json</a>.</p>
 
+<h2>Cache</h2>
+<p>Todas as respostas trazem <code>X-Cache</code> (HIT, MISS ou BYPASS) e <code>X-Cache-Driver</code>.
+O dado muda uma vez por ano, então o cache é agressivo: 24h para listas, 5 min para busca.</p>
+
 <h2>Regras</h2>
 <ul>
 <li><code>ibge_code</code> é a chave estável — <code>id</code> é interno.</li>
@@ -58,4 +63,7 @@ curl http://127.0.0.1:8130/v1/locations/cities/1100015</pre>
 <li>Cache público de 1 dia; o dado muda uma vez por ano.</li>
 <li>Erros sempre em JSON com o campo <code>error</code>.</li>
 </ul>
+<hr style="margin:48px 0 22px;border:0;border-top:1px solid #DDE7E1">
+<p style="font-size:13px;color:#6C7C73">Desenvolvido e mantido por
+<a href="https://blitsoft.com.br"><b>Blit Softwares</b></a> · Cambé/PR</p>
 </div></body></html>

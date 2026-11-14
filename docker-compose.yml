@@ -19,6 +19,16 @@ services:
       timeout: 5s
       retries: 20
 
+  cache:
+    image: redis:7-alpine
+    container_name: brazil-locations-cache
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru --save ""
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   app:
     build: .
     container_name: brazil-locations-app
@@ -28,10 +38,16 @@ services:
       DB_NAME: locations
       DB_USER: locations
       DB_PASS: locations_local
+      CACHE_DRIVER: ${CACHE_DRIVER:-redis}
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      CACHE_TTL: 86400
     ports:
       - "127.0.0.1:8130:8080"
     depends_on:
       db:
+        condition: service_healthy
+      cache:
         condition: service_healthy
 
 volumes:

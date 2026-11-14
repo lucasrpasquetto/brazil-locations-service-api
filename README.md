@@ -1,4 +1,10 @@
-# Brazil Locations Service API
+<p align="center">
+  <a href="https://blitsoft.com.br">
+    <img src="docs/assets/blit-logo.svg" alt="Blit Softwares" height="48">
+  </a>
+</p>
+
+<h1 align="center">Brazil Locations Service API</h1>
 
 A small, fast, open API for Brazilian locations: **27 states** and **5,570 municipalities**
 with official IBGE codes. Read-only, no authentication, no API key.
@@ -104,6 +110,44 @@ Always JSON, always with an `error` field:
 
 ---
 
+## Caching
+
+Three layers, because this dataset is static and the same 29 answers are requested forever:
+
+| Layer | What it does | Where |
+|---|---|---|
+| HTTP | `Cache-Control: public, max-age=86400` — browsers and CDN never touch PHP | every response |
+| App (Redis) | key-value with TTL, shared across instances | `CACHE_DRIVER=redis` |
+| App (file) | same API, no dependencies — good for shared hosting | `CACHE_DRIVER=file` |
+
+`CACHE_DRIVER=none` disables it entirely. If Redis is unreachable, the app **falls back to file**
+instead of failing — the API never goes down because the cache is missing.
+
+Every response tells you what happened:
+
+```
+X-Cache: HIT | MISS | BYPASS
+X-Cache-Driver: redis | file | none
+```
+
+TTLs: 24h for states, regions, cities by UF and city by code; 5 min for search (the key space is
+unbounded, so search must expire fast). 404s are cached too — a missing UF is also an answer.
+
+Measured locally, before and after the cache (50 requests each):
+
+| Endpoint | Sem cache | Com cache |
+|---|---|---|
+| `/states` | 2,5 ms | 3,0 ms |
+| `/states/MT/cities` | 3,1 ms | 2,7 ms |
+| `/cities?search=sao` | **7,3 ms** | **2,7 ms** |
+| `/cities/1100015` | 2,4 ms | 2,5 ms |
+
+The honest reading: MariaDB was never the bottleneck for a 5,570-row table. The cache pays off on
+search (the only full scan) and under burst traffic — it is what keeps the database flat when a
+crawler arrives. For everything else, the HTTP layer is the real winner.
+
+---
+
 ## Running without Docker
 
 Requires PHP 8.3+, Composer and a MariaDB/MySQL database.
@@ -191,3 +235,12 @@ Documentação em `/docs`, especificação em `/openapi.json` e versão para age
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
+---
+
+<p align="center">
+  <sub>Built and maintained by
+    <a href="https://blitsoft.com.br"><b>Blit Softwares</b></a> ·
+    software house from Cambé/PR, Brazil
+  </sub>
+</p>

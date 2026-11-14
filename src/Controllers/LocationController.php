@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Cache;
 use App\Database;
-use PDO;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
 final class LocationController
 {
+    private Cache $cache;
+
+    public function __construct(?Cache $cache = null)
+    {
+        $this->cache = $cache ?? new Cache();
+    }
+
     public function health(Request $request, Response $response): Response
     {
         try {
@@ -23,36 +30,43 @@ final class LocationController
         return $this->json($response, [
             'status' => $db === 'ok' ? 'ok' : 'degraded',
             'database' => $db,
+            'cache' => $this->cache->driver(),
             'time' => gmdate('c'),
-        ], $db === 'ok' ? 200 : 503);
+        ], $db === 'ok' ? 200 : 503, 'BYPASS');
     }
 
     public function countries(Request $request, Response $response): Response
     {
-        $rows = Database::pdo()
-            ->query('select id, name, slug, phone_code from countries order by name')
-            ->fetchAll();
+        return $this->cached($response, 'countries', 86400, function (): array {
+            $rows = Database::pdo()
+                ->query('select id, name, slug, phone_code from countries order by name')
+                ->fetchAll();
 
-        return $this->json($response, ['data' => $rows]);
+            return ['data' => $rows];
+        });
     }
 
     public function regions(Request $request, Response $response): Response
     {
-        $rows = Database::pdo()
-            ->query('select id, country_id, name, sigla from regions order by id')
-            ->fetchAll();
+        return $this->cached($response, 'regions', 86400, function (): array {
+            $rows = Database::pdo()
+                ->query('select id, country_id, name, sigla from regions order by id')
+                ->fetchAll();
 
-        return $this->json($response, ['data' => $rows]);
+            return ['data' => $rows];
+        });
     }
 
     public function states(Request $request, Response $response): Response
     {
-        $sql = 'select s.id, s.slug as uf, s.name, s.code as ibge_code, r.sigla as region
-                from states s
-                join regions r on r.id = s.region_id
-                order by s.slug';
+        return $this->cached($response, 'states', 86400, function (): array {
+            $sql = 'select s.id, s.slug as uf, s.name, s.code as ibge_code, r.sigla as region
+                    from states s
+                    join regions r on r.id = s.region_id
+                    order by s.slug';
 
-        return $this->json($response, ['data' => Database::pdo()->query($sql)->fetchAll()]);
+            return ['data' => Database::pdo()->query($sql)->fetchAll()];
+        });
     }
 
     public function citiesByState(Request $request, Response $response, array $args): Response
@@ -62,22 +76,35 @@ final class LocationController
         $limit = (int) ($params['limit'] ?? 1000);
         $limit = max(1, min($limit, 1000));
 
-        $stmt = Database::pdo()->prepare(
-            'select c.id, c.code as ibge_code, c.name, s.slug as uf
-             from cities c
-             join states s on s.id = c.state_id
-             where s.slug = :uf
-             order by c.name
-             limit ' . $limit
-        );
-        $stmt->execute(['uf' => $uf]);
-        $rows = $stmt->fetchAll();
+        $chave = "cities:$uf:$limit";
+        $payload = $this->cache->get($chave);
+        $estado = 'HIT';
 
-        if ($rows === []) {
-            return $this->json($response, ['error' => 'uf_not_found', 'message' => 'UF inexistente ou sem municipios', 'uf' => $uf], 404);
+        if ($payload === null) {
+            $estado = 'MISS';
+            $stmt = Database::pdo()->prepare(
+                'select c.id, c.code as ibge_code, c.name, s.slug as uf
+                 from cities c
+                 join states s on s.id = c.state_id
+                 where s.slug = :uf
+                 order by c.name
+                 limit ' . $limit
+            );
+            $stmt->execute(['uf' => $uf]);
+            $rows = $stmt->fetchAll();
+
+            $payload = $rows === []
+                ? ['__not_found' => true]
+                : ['uf' => $uf, 'count' => count($rows), 'data' => $rows];
+
+            $this->cache->set($chave, $payload, 86400);
         }
 
-        return $this->json($response, ['uf' => $uf, 'count' => count($rows), 'data' => $rows]);
+        if (isset($payload['__not_found'])) {
+            return $this->json($response, ['error' => 'uf_not_found', 'message' => 'UF inexistente ou sem municipios', 'uf' => $uf], 404, $estado);
+        }
+
+        return $this->json($response, $payload, 200, $estado);
     }
 
     public function searchCities(Request $request, Response $response): Response
@@ -89,51 +116,79 @@ final class LocationController
         $limit = max(1, min($limit, 100));
 
         if (mb_strlen($term) < 2) {
-            return $this->json($response, ['error' => 'term_too_short', 'message' => 'search exige ao menos 2 caracteres'], 422);
+            return $this->json($response, ['error' => 'term_too_short', 'message' => 'search exige ao menos 2 caracteres'], 422, 'BYPASS');
         }
 
         $termo = $this->normalize($term);
+        $chave = 'search:' . $termo . ':' . $uf . ':' . $limit;
 
-        $sql = 'select c.id, c.code as ibge_code, c.name, s.slug as uf
-                from cities c
-                join states s on s.id = c.state_id
-                where c.name_search like :term';
-        $bind = ['term' => '%' . $termo . '%'];
+        // busca muda de acordo com o termo; TTL curto evita encher o cache de lixo
+        return $this->cached($response, $chave, 300, function () use ($term, $termo, $uf, $limit): array {
+            $sql = 'select c.id, c.code as ibge_code, c.name, s.slug as uf
+                    from cities c
+                    join states s on s.id = c.state_id
+                    where c.name_search like :term';
+            $bind = ['term' => '%' . $termo . '%'];
 
-        if ($uf !== '') {
-            $sql .= ' and s.slug = :uf';
-            $bind['uf'] = $uf;
-        }
+            if ($uf !== '') {
+                $sql .= ' and s.slug = :uf';
+                $bind['uf'] = $uf;
+            }
 
-        $sql .= ' order by (c.name_search like :prefixo) desc, c.name limit ' . $limit;
-        $bind['prefixo'] = $termo . '%';
+            $sql .= ' order by (c.name_search like :prefixo) desc, c.name limit ' . $limit;
+            $bind['prefixo'] = $termo . '%';
 
-        $stmt = Database::pdo()->prepare($sql);
-        $stmt->execute($bind);
-        $rows = $stmt->fetchAll();
+            $stmt = Database::pdo()->prepare($sql);
+            $stmt->execute($bind);
+            $rows = $stmt->fetchAll();
 
-        return $this->json($response, ['search' => $term, 'uf' => $uf ?: null, 'count' => count($rows), 'data' => $rows]);
+            return ['search' => $term, 'uf' => $uf ?: null, 'count' => count($rows), 'data' => $rows];
+        });
     }
 
     public function showCity(Request $request, Response $response, array $args): Response
     {
         $code = preg_replace('/\D/', '', (string) ($args['code'] ?? ''));
 
-        $stmt = Database::pdo()->prepare(
-            'select c.id, c.code as ibge_code, c.name, s.slug as uf, s.name as state_name, r.name as region
-             from cities c
-             join states s on s.id = c.state_id
-             join regions r on r.id = s.region_id
-             where c.code = :code'
-        );
-        $stmt->execute(['code' => $code]);
-        $row = $stmt->fetch();
+        $chave = "city:$code";
+        $payload = $this->cache->get($chave);
+        $estado = 'HIT';
 
-        if (! $row) {
-            return $this->json($response, ['error' => 'city_not_found', 'code' => $code], 404);
+        if ($payload === null) {
+            $estado = 'MISS';
+            $stmt = Database::pdo()->prepare(
+                'select c.id, c.code as ibge_code, c.name, s.slug as uf, s.name as state_name, r.name as region
+                 from cities c
+                 join states s on s.id = c.state_id
+                 join regions r on r.id = s.region_id
+                 where c.code = :code'
+            );
+            $stmt->execute(['code' => $code]);
+            $row = $stmt->fetch();
+
+            $payload = $row === false ? ['__not_found' => true] : $row;
+            $this->cache->set($chave, $payload, 86400);
         }
 
-        return $this->json($response, $row);
+        if (isset($payload['__not_found'])) {
+            return $this->json($response, ['error' => 'city_not_found', 'code' => $code], 404, $estado);
+        }
+
+        return $this->json($response, $payload, 200, $estado);
+    }
+
+    private function cached(Response $response, string $key, int $ttl, callable $callback): Response
+    {
+        $cached = $this->cache->get($key);
+
+        if ($cached !== null) {
+            return $this->json($response, $cached, 200, 'HIT');
+        }
+
+        $payload = $callback();
+        $this->cache->set($key, $payload, $ttl);
+
+        return $this->json($response, $payload, 200, 'MISS');
     }
 
     private function normalize(string $value): string
@@ -151,13 +206,21 @@ final class LocationController
         return strtr($value, $map);
     }
 
-    private function json(Response $response, array $payload, int $status = 200): Response
+    private function json(Response $response, array $payload, int $status = 200, string $cacheState = 'BYPASS'): Response
     {
         $response->getBody()->write(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
-        return $response
-            ->withHeader('Content-Type', 'application/json; charset=utf-8')
-            ->withHeader('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800')
-            ->withStatus($status);
+        $headers = [
+            'Content-Type' => 'application/json; charset=utf-8',
+            'Cache-Control' => 'public, max-age=86400, stale-while-revalidate=604800',
+            'X-Cache' => $cacheState,
+            'X-Cache-Driver' => $this->cache->driver(),
+        ];
+
+        foreach ($headers as $name => $value) {
+            $response = $response->withHeader($name, $value);
+        }
+
+        return $response->withStatus($status);
     }
 }

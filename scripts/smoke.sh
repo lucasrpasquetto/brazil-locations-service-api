@@ -30,9 +30,18 @@ check "cidade por codigo IBGE"       "$BASE/v1/locations/cities/1100015" 200
 check "UF inexistente -> 404"        "$BASE/v1/locations/states/ZZ/cities" 404
 check "termo curto -> 422"           "$BASE/v1/locations/cities?search=a" 422
 check "codigo inexistente -> 404"    "$BASE/v1/locations/cities/9999999" 404
+check "cache header presente"        "$BASE/v1/locations/states" 200
 check "docs"                         "$BASE/docs" 200
 check "openapi"                      "$BASE/openapi.json" 200
 check "llms.txt"                     "$BASE/llms.txt" 200
+
+# verifica header de cache
+if curl -s -D - -o /dev/null "$BASE/v1/locations/states" | grep -qi 'x-cache'; then
+  printf '  ok   %-42s %s\n' "header X-Cache" "presente"
+else
+  printf '  FAIL %-42s header X-Cache ausente\n' "header X-Cache"
+  FALHAS=$((FALHAS+1))
+fi
 
 echo
 if [ "$FALHAS" -eq 0 ]; then
