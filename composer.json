@@ -1,0 +1,22 @@
+{
+  "name": "lucasrpasquetto/brazil-locations-service-api",
+  "description": "API pública de localidades brasileiras (UF e municípios com código IBGE) em Slim 4 e MariaDB",
+  "type": "project",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.3",
+    "slim/slim": "^4.14",
+    "slim/psr7": "^1.7"
+  },
+  "autoload": {
+    "psr-4": {
+      "App\\": "src/"
+    }
+  },
+  "scripts": {
+    "serve": "php -S 0.0.0.0:8080 -t public public/index.php"
+  },
+  "config": {
+    "sort-packages": true
+  }
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Brazil Locations Service API</title>
+<style>
+body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#FBFDFB;color:#0F1C18;line-height:1.6}
+.wrap{max-width:900px;margin:0 auto;padding:48px 24px 80px}
+h1{font-size:38px;letter-spacing:-.02em;margin:0 0 8px}
+h2{margin:36px 0 10px;font-size:22px}
+p{color:#41544C}
+code,pre{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px}
+pre{background:#0F1C18;color:#DDE9E2;padding:16px 18px;border-radius:12px;overflow:auto}
+.tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#0E4A38;background:#E7F1EC;border-radius:999px;padding:4px 10px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;background:#fff;border:1px solid #DDE7E1;border-radius:12px;overflow:hidden;font-size:14px}
+th,td{text-align:left;padding:11px 14px;border-bottom:1px solid #DDE7E1}
+th{background:#F1F7F3;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#41544C}
+tr:last-child td{border-bottom:0}
+a{color:#0E4A38}
+</style></head><body><div class="wrap">
+<span class="tag">API pública</span>
+<h1>Brazil Locations</h1>
+<p>Países, regiões, UFs e municípios brasileiros com código IBGE. Leitura, sem autenticação, sem chave.</p>
+
+<h2>Endpoints</h2>
+<table>
+<tr><th>Método</th><th>Rota</th><th>O que faz</th></tr>
+<tr><td>GET</td><td><code>/v1/locations/states</code></td><td>27 UFs com região</td></tr>
+<tr><td>GET</td><td><code>/v1/locations/states/{uf}/cities</code></td><td>Municípios da UF</td></tr>
+<tr><td>GET</td><td><code>/v1/locations/cities?search=</code></td><td>Busca por nome (ignora acento)</td></tr>
+<tr><td>GET</td><td><code>/v1/locations/cities/{code}</code></td><td>Município pelo código IBGE</td></tr>
+<tr><td>GET</td><td><code>/health</code></td><td>Estado do serviço</td></tr>
+</table>
+
+<h2>Exemplos</h2>
+<pre>curl http://127.0.0.1:8130/v1/locations/states
+
+curl "http://127.0.0.1:8130/v1/locations/states/MT/cities?limit=5"
+
+curl "http://127.0.0.1:8130/v1/locations/cities?search=floresta&amp;uf=RO"
+
+curl http://127.0.0.1:8130/v1/locations/cities/1100015</pre>
+
+<h2>Resposta</h2>
+<pre>{
+  "uf": "MT",
+  "count": 142,
+  "data": [
+    { "id": 5101, "ibge_code": "5100102", "name": "Acorizal", "uf": "MT" }
+  ]
+}</pre>
+
+<h2>Para agentes de IA</h2>
+<p>Existe uma versão enxuta, sem HTML: <a href="/llms.txt">/llms.txt</a>. E a especificação completa em <a href="/openapi.json">/openapi.json</a>.</p>
+
+<h2>Regras</h2>
+<ul>
+<li><code>ibge_code</code> é a chave estável — <code>id</code> é interno.</li>
+<li>Busca é por prefixo, sem acento e sem diferenciar caixa.</li>
+<li>Cache público de 1 dia; o dado muda uma vez por ano.</li>
+<li>Erros sempre em JSON com o campo <code>error</code>.</li>
+</ul>
+</div></body></html>

@@ -1,0 +1,45 @@
+# Brazil Locations Service API
+
+API pública de localidades brasileiras. Leitura, sem autenticação, sem chave.
+Base: https://locations.blit.app.br  ·  Local: http://127.0.0.1:8130
+
+Dados: 1 país, 5 regiões, 27 UFs, 5.570 municípios com código IBGE.
+Atualização: anual (estimativas IBGE). Cache público de 1 dia.
+
+## Endpoints
+
+GET /v1/locations/states
+  → { data: [ { id, uf, name, ibge_code, region } ] }
+  Use quando precisar montar um select de estado. 27 itens, cacheável.
+
+GET /v1/locations/states/{uf}/cities
+  uf: sigla com 2 letras maiúsculas (MT, SP, RO)
+  → { uf, count, data: [ { id, ibge_code, name, uf } ] }
+  Retorna 404 com { error: "uf_not_found" } se a UF não existir.
+
+GET /v1/locations/cities?search=floresta&uf=RO&limit=20
+  search: mínimo 2 caracteres, ignora acento e caixa
+  uf: opcional
+  limit: 1..100, padrão 20
+  → { search, uf, count, data: [...] }
+  Erro 422 se search tiver menos de 2 caracteres.
+
+GET /v1/locations/cities/{code}
+  code: código IBGE de 7 dígitos
+  → { id, ibge_code, name, uf, state_name, region }
+  404 com { error: "city_not_found" } se não existir.
+
+GET /health
+  → { status, database, time }
+
+## Regras para agentes
+
+1. Use ibge_code como chave estável. O campo id é interno e pode mudar.
+2. Busque por prefixo (o endpoint usa LIKE 'termo%'), então "flor" acha "Flores".
+3. Para preencher formulário: chame /states uma vez e cacheie; chame /states/{uf}/cities ao trocar de UF.
+4. Não faça uma chamada por cidade. Use a lista da UF.
+5. Erros sempre em JSON com campo "error".
+
+## Exemplo
+
+curl "https://locations.blit.app.br/v1/locations/states/MT/cities?limit=5"

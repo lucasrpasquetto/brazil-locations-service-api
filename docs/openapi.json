@@ -1,0 +1,148 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Brazil Locations Service API",
+    "version": "1.0.0",
+    "description": "Brazilian states and municipalities with IBGE codes. Public read-only API, no authentication."
+  },
+  "servers": [
+    {
+      "url": "http://127.0.0.1:8130",
+      "description": "Local"
+    },
+    {
+      "url": "https://locations.blit.app.br",
+      "description": "Public instance (planned)"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Estado do serviço",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "503": {
+            "description": "Degradado"
+          }
+        }
+      }
+    },
+    "/v1/locations/states": {
+      "get": {
+        "summary": "Lista as 27 UFs",
+        "responses": {
+          "200": {
+            "description": "Lista de UFs",
+            "content": {
+              "application/json": {
+                "example": {
+                  "data": [
+                    {
+                      "id": 21,
+                      "uf": "RO",
+                      "name": "Rondônia",
+                      "ibge_code": 11,
+                      "region": "N"
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/locations/states/{uf}/cities": {
+      "get": {
+        "summary": "Municípios de uma UF",
+        "parameters": [
+          {
+            "name": "uf",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "MT"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Municípios"
+          },
+          "404": {
+            "description": "UF inexistente"
+          }
+        }
+      }
+    },
+    "/v1/locations/cities": {
+      "get": {
+        "summary": "Busca municípios por nome",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 2
+            },
+            "example": "floresta"
+          },
+          {
+            "name": "uf",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            },
+            "example": "RO"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Resultados"
+          },
+          "422": {
+            "description": "Termo curto demais"
+          }
+        }
+      }
+    },
+    "/v1/locations/cities/{code}": {
+      "get": {
+        "summary": "Município pelo código IBGE",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "example": "1100015"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Município"
+          },
+          "404": {
+            "description": "Não encontrado"
+          }
+        }
+      }
+    }
+  }
+}
