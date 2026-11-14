@@ -1,7 +1,7 @@
 # Brazil Locations Service API
 
 API pública de localidades brasileiras. Leitura, sem autenticação, sem chave.
-Base: https://locations.blit.app.br  ·  Local: http://127.0.0.1:8130
+Base: https://locations.blit.app.br
 
 Dados: 1 país, 5 regiões, 27 UFs, 5.570 municípios com código IBGE.
 Atualização: anual (estimativas IBGE). Cache público de 1 dia.

@@ -20,6 +20,8 @@ a{color:#0E4A38}
 <span class="tag">API pública</span>
 <h1>Brazil Locations</h1>
 <p>Países, regiões, UFs e municípios brasileiros com código IBGE. Leitura, sem autenticação, sem chave.</p>
+<p style="font-family:ui-monospace,monospace;font-size:14px;background:#F1F7F3;border:1px solid #DDE7E1;border-radius:10px;padding:10px 14px;display:inline-block">
+Base URL: <b>https://locations.blit.app.br</b></p>
 
 <h2>Endpoints</h2>
 <table>
@@ -32,13 +34,13 @@ a{color:#0E4A38}
 </table>
 
 <h2>Exemplos</h2>
-<pre>curl http://127.0.0.1:8130/v1/locations/states
+<pre>curl https://locations.blit.app.br/v1/locations/states
 
-curl "http://127.0.0.1:8130/v1/locations/states/MT/cities?limit=5"
+curl "https://locations.blit.app.br/v1/locations/states/MT/cities?limit=5"
 
-curl "http://127.0.0.1:8130/v1/locations/cities?search=floresta&amp;uf=RO"
+curl "https://locations.blit.app.br/v1/locations/cities?search=floresta&amp;uf=RO"
 
-curl http://127.0.0.1:8130/v1/locations/cities/1100015</pre>
+curl https://locations.blit.app.br/v1/locations/cities/1100015</pre>
 
 <h2>Resposta</h2>
 <pre>{

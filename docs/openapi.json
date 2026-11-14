@@ -7,12 +7,12 @@
   },
   "servers": [
     {
-      "url": "http://127.0.0.1:8130",
-      "description": "Local"
+      "url": "https://locations.blit.app.br",
+      "description": "Produção"
     },
     {
-      "url": "https://locations.blit.app.br",
-      "description": "Public instance (planned)"
+      "url": "http://127.0.0.1:8130",
+      "description": "Local (docker compose)"
     }
   ],
   "paths": {

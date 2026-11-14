@@ -14,6 +14,8 @@ with official IBGE codes. Read-only, no authentication, no API key.
 
 Built with **Slim 4** and **MariaDB**. Runs with a single `docker compose up`.
 
+**Live API:** <https://locations.blit.app.br> · docs: <https://locations.blit.app.br/docs>
+
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![PHP](https://img.shields.io/badge/php-%3E%3D8.3-blue.svg)](https://www.php.net/)
 [![Docker](https://img.shields.io/badge/docker-compose-blue.svg)](docker-compose.yml)
